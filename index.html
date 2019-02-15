@@ -1,1 +1,29 @@
-Hello World
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+$.urlParam = function(name){
+    var results = new RegExp('[\?&]' + name + '=([^]*)').exec(window.location.href);
+    if (results==null){
+       return null;
+    }
+    else{
+       return results[1] || 0;
+    }
+} 
+
+console.log(urlParam('url'))
+</script>
+</head>
+<body>
+
+<h2>This is a heading</h2>
+
+<p>This is a paragraph.</p>
+<p>This is another paragraph.</p>
+
+<button>Click me to hide paragraphs</button>
+
+</body>
+</html>
