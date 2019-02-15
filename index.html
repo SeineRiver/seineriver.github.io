@@ -14,11 +14,12 @@ $.urlParam = function(name){
 } 
 
 var inputFile = $.urlParam('url');
+$("#status").html(inputFile)
 $("#urls").html("Loading...").load(inputFile);
 </script>
 </head>
 <body>
+<div id="status"> </div>	
 <div id="urls"> </div>
-
 </body>
 </html>
