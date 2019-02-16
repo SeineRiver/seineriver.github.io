@@ -16,8 +16,11 @@ $.urlParam = function(name){
 $(document).ready(function(){
   $("button").click(function(){
 	var inputFile = $.urlParam('url');
-	$("#status").html(inputFile)
-	$("#urls").html("Loading...").load(inputFile);
+	
+	$.get( inputFile, function( data ) {
+	  var lines = data.split("\n");
+	  $("#status").html("file: " + inputFile + ", lines: " + lines.length);
+	});
   });
 });
 
