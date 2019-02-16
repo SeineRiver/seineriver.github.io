@@ -11,15 +11,23 @@ $.urlParam = function(name){
     else{
        return results[1] || 0;
     }
-} 
+}
 
-var inputFile = $.urlParam('url');
-$("#status").html(inputFile)
-$("#urls").html("Loading...").load(inputFile);
+$(document).ready(function(){
+  $("button").click(function(){
+	var inputFile = $.urlParam('url');
+	$("#status").html(inputFile)
+	$("#urls").html("Loading...").load(inputFile);
+  });
+});
+
+
 </script>
 </head>
 <body>
-<div id="status"> </div>	
-<div id="urls"> </div>
+<p id="status">bleh bleh</p>
+<button>Go</button>
+
+<div id="urls"></div>
 </body>
 </html>
