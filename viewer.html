@@ -6,16 +6,6 @@
 <link  href="https://unpkg.com/nanogallery2@2.3.0/dist/css/nanogallery2.min.css" rel="stylesheet" type="text/css">
 <script  type="text/javascript" src="https://unpkg.com/nanogallery2@2.3.0/dist/jquery.nanogallery2.min.js"></script>
 <script>
-$.urlParam = function(name){
-    var results = new RegExp('[\?&]' + name + '=([^]*)').exec(window.location.href);
-    if (results==null){
-       return null;
-    }
-    else{
-       return results[1] || 0;
-    }
-}
-
 $(document).ready(function(){
 	$("button").click(function () {
 		var inputFile = $('#urls').val()
@@ -42,12 +32,9 @@ $(document).ready(function(){
 		});
 	});
 });
-
-
 </script>
 </head>
 <body>
-
 Link to urls.txt file: <input type="textbox" id="urls"></input>
 <button>Generate gallery</button> 
 <hr>
