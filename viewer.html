@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+ <!-- nanogallery2 -->
+<link  href="https://unpkg.com/nanogallery2@2.3.0/dist/css/nanogallery2.min.css" rel="stylesheet" type="text/css">
+<script  type="text/javascript" src="https://unpkg.com/nanogallery2@2.3.0/dist/jquery.nanogallery2.min.js"></script>
+<script>
+$.urlParam = function(name){
+    var results = new RegExp('[\?&]' + name + '=([^]*)').exec(window.location.href);
+    if (results==null){
+       return null;
+    }
+    else{
+       return results[1] || 0;
+    }
+}
+
+$(document).ready(function(){  
+	var inputFile = $.urlParam('url');
+
+	$.get( inputFile, function( data ) {
+	  var lines = data.split("\n");
+	  $("#status").html("file: " + inputFile + ", lines: " + lines.length);
+
+	  var galleryItems = [];
+	  for (i=0; i<lines.length; i++) {
+	  	var item = { src: lines[i], srct: lines[i], title: lines[i]};
+	  	galleryItems.push(item);
+	  }
+	  
+	  jQuery("#nanogallery2").nanogallery2( {
+	    <!-- ### gallery settings ### -->
+	    thumbnailHeight:  150,
+	    thumbnailWidth:   150,
+	    itemsBaseURL:     '',
+	    
+	    <!-- ### gallery content ### -->
+	    items: galleryItems
+	  });
+	});	  
+});
+
+
+</script>
+</head>
+<body>
+<div id="nanogallery2">gallery_made_with_nanogallery2</div>
+</body>
+</html>
