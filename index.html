@@ -16,40 +16,35 @@ $.urlParam = function(name){
     }
 }
 
-$(document).ready(function(){
-  $("button").click(function(){
+$(document).ready(function(){  
 	var inputFile = $.urlParam('url');
-	
+
 	$.get( inputFile, function( data ) {
 	  var lines = data.split("\n");
 	  $("#status").html("file: " + inputFile + ", lines: " + lines.length);
 
 	  var galleryItems = [];
-	  for (i=0; i<20; i++) {
+	  for (i=0; i<lines.length; i++) {
 	  	var item = { src: lines[i], srct: lines[i], title: lines[i]};
 	  	galleryItems.push(item);
 	  }
 	  
 	  jQuery("#nanogallery2").nanogallery2( {
-        <!-- ### gallery settings ### -->
-        thumbnailHeight:  150,
-        thumbnailWidth:   150,
-        itemsBaseURL:     '',
-        
-        <!-- ### gallery content ### -->
-        items: galleryItems
-      });
-	});
-  });
+	    <!-- ### gallery settings ### -->
+	    thumbnailHeight:  150,
+	    thumbnailWidth:   150,
+	    itemsBaseURL:     '',
+	    
+	    <!-- ### gallery content ### -->
+	    items: galleryItems
+	  });
+	});	  
 });
 
 
 </script>
 </head>
 <body>
-<p id="status">bleh bleh</p>
-<button>Go</button>
-
- <div id="nanogallery2">gallery_made_with_nanogallery2</div>
+<div id="nanogallery2">gallery_made_with_nanogallery2</div>
 </body>
 </html>
