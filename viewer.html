@@ -30,23 +30,13 @@ function loadImg() {
 
 $(document).ready(function(){
 	$("#gallery").click(function () {
-		$("#nanogallery2").empty();
-
 		var inputFile = $('#urls').val()
 
 		$.get( inputFile, function( data ) {
 		  lines = data.split("\n");
 		  loadImg();
 		});
-	});
-
-	$("#next").click(function () {
-		if (start + 50 >= lines.length - 1) return;
-
-		start = start + 50;
-		$("#nanogallery2").empty();
-		loadImg();	
-	});
+	});	
 });
 
 
