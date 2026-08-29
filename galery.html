@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Image Gallery (Pure HTML + JS)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --gap: 14px; --bg: #0b0d10; --card: #14181d; --text: #e9eef3; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: linear-gradient(180deg, rgba(11,13,16,0.9), rgba(11,13,16,0.6) 60%, transparent);
+      backdrop-filter: blur(6px);
+      padding: 18px var(--gap) 10px;
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; font-weight: 700; }
+    .controls {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    }
+    button, .btn {
+      border: 0; padding: 10px 14px; border-radius: 12px; background: #2a3441; color: var(--text);
+      cursor: pointer; font-weight: 600; transition: transform .04s ease, background .2s ease;
+    }
+    button:hover, .btn:hover { background: #334154; }
+    button:active, .btn:active { transform: translateY(1px); }
+    input[type="file"] { display: none; }
+
+    .hint { opacity: .75; font-size: 13px; }
+    .gallery {
+      padding: 18px var(--gap) calc(24px + env(safe-area-inset-bottom, 0));
+      display: grid; gap: var(--gap);
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
+    .card {
+      position: relative; overflow: hidden; border-radius: 14px; background: var(--card);
+      box-shadow: 0 6px 22px rgba(0,0,0,.3);
+      aspect-ratio: 1 / 1; display: grid; place-items: center;
+    }
+    .card img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      transform: scale(1.001); transition: transform .25s ease;
+    }
+    .card:hover img { transform: scale(1.03); }
+
+    .empty { text-align: center; opacity: .7; padding: 40px; }
+
+    /* Lightbox */
+    .lightbox {
+      position: fixed; inset: 0; background: rgba(0,0,0,.9);
+      display: none; align-items: center; justify-content: center;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img {
+      max-width: 92vw; max-height: 88vh; object-fit: contain; border-radius: 12px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.6);
+    }
+    .lb-controls {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: space-between;
+      pointer-events: none; padding: 0 16px;
+    }
+    .lb-btn {
+      pointer-events: all; font-size: 18px; padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,.08);
+    }
+    .lb-close {
+      position: fixed; top: 16px; right: 16px;
+    }
+    .footer {
+      text-align: center; padding: 8px 0 22px; opacity: .6; font-size: 12px;
+    }
+    @media (min-width: 1100px) {
+      .gallery { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Image Gallery</h1>
+    <div class="controls">
+      <!-- Folder picker (client-side, no server needed) -->
+      <label class="btn" for="folderPicker">Choose folder…</label>
+      <input id="folderPicker" type="file" webkitdirectory multiple accept="image/*" />
+
+      <!-- Load from /images via static list or numbered pattern -->
+      <button id="loadStatic">Load from /images</button>
+
+      <!-- Example: quickly build numbered series -->
+      <button id="loadNumbered" title="Generate img-001..img-120">Load numbered demo</button>
+
+      <span class="hint">Tip: “Choose folder…” lets you select your <code>images/</code> directory locally.</span>
+    </div>
+  </header>
+
+  <main class="gallery" id="gallery"></main>
+  <div class="empty" id="empty">No images yet. Pick a folder or click “Load from /images”.</div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" aria-hidden="true">
+    <img id="lbImg" alt="" />
+    <button class="btn lb-close" id="lbClose" aria-label="Close">Close ✕</button>
+    <div class="lb-controls">
+      <button class="btn lb-btn" id="prevBtn" aria-label="Previous">◀</button>
+      <button class="btn lb-btn" id="nextBtn" aria-label="Next">▶</button>
+    </div>
+  </div>
+
+  <div class="footer">Pure HTML + JS • Lazy-loading • Keyboard nav (← → Esc)</div>
+
+  <script>
+    // ====== CONFIG: Option 2 – Static filenames in /images ======
+    // Put your real filenames here if you want to load from /images (no backend required).
+    const IMAGE_LIST = [
+      // "image1.jpg", "image2.jpg", "photo.png", "
+      "image001.png",  "image005.png",  "image009.png",  "image013.png",  "image017.png",  "image021.png",  "image025.png",  "image029.png",  "image033.png",  "image037.png",  "image041.png",  "image045.png",  "image049.png",  "image053.png",  "image057.png",  "image061.png",  "image065.png",  "image069.png",  "image073.png",  "image077.png",  "image081.png",  "image085.png", "image002.png",  "image006.png",  "image010.png",  "image014.png",  "image018.png",  "image022.png",  "image026.png",  "image030.png",  "image034.png",  "image038.png",  "image042.png",  "image046.png",  "image050.png",  "image054.png",  "image058.png",  "image062.png",  "image066.png",  "image070.png",  "image074.png",  "image078.png",  "image082.png", "image003.png",  "image007.png",  "image011.png",  "image015.png",  "image019.png",  "image023.png",  "image027.png",  "image031.png",  "image035.png",  "image039.png",  "image043.png",  "image047.png",  "image051.png",  "image055.png",  "image059.png",  "image063.png",  "image067.png",  "image071.png",  "image075.png",  "image079.png",  "image083.png", "image004.png",  "image008.png",  "image012.png",  "image016.png",  "image020.png",  "image024.png",  "image028.png",  "image032.png",  "image036.png",  "image040.png",  "image044.png",  "image048.png",  "image052.png",  "image056.png",  "image060.png",  "image064.png",  "image068.png",  "image072.png",  "image076.png",  "image080.png",  "image084.png"
+    ];
+
+    // ====== Utility: Build numbered series quickly (img-001.jpg .. img-120.jpg) ======
+    function generateNumberedList({ prefix = "img-", start = 1, end = 30, pad = 3, ext = "jpg" } = {}) {
+      const out = [];
+      for (let i = start; i <= end; i++) {
+        const num = String(i).padStart(pad, "0");
+        out.push(`${prefix}${num}.${ext}`);
+      }
+      return out;
+    }
+
+    // ====== State ======
+    const gallery = document.getElementById("gallery");
+    const empty = document.getElementById("empty");
+    let items = []; // { src, title, isObjectURL? }
+    let currentIndex = -1;
+
+    // ====== Lazy-loading with IntersectionObserver ======
+    const io = "IntersectionObserver" in window ? new IntersectionObserver(entries => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          const img = e.target;
+          img.src = img.dataset.src;
+          io.unobserve(img);
+        }
+      }
+    }, { rootMargin: "300px" }) : null;
+
+    function clearGallery() {
+      items.forEach(it => { if (it.isObjectURL) URL.revokeObjectURL(it.src); });
+      items = [];
+      gallery.innerHTML = "";
+      currentIndex = -1;
+    }
+
+    function renderGallery(list) {
+      clearGallery();
+      if (!list || !list.length) {
+        empty.style.display = "block";
+        return;
+      }
+      empty.style.display = "none";
+
+      items = list;
+      const frag = document.createDocumentFragment();
+
+      list.forEach((it, idx) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        const img = document.createElement("img");
+        img.alt = it.title || "";
+        img.loading = "lazy";
+        img.decoding = "async";
+        img.dataset.src = it.src; // lazy
+        img.addEventListener("click", () => openLightbox(idx));
+        card.appendChild(img);
+        frag.appendChild(card);
+
+        if (io) io.observe(img); else img.src = img.dataset.src;
+      });
+
+      gallery.appendChild(frag);
+    }
+
+    // ====== Lightbox ======
+    const lightbox = document.getElementById("lightbox");
+    const lbImg = document.getElementById("lbImg");
+    const lbClose = document.getElementById("lbClose");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    function openLightbox(idx) {
+      if (!items.length) return;
+      currentIndex = idx;
+      lbImg.src = items[idx].src;
+      lbImg.alt = items[idx].title || "";
+      lightbox.classList.add("open");
+      lightbox.setAttribute("aria-hidden", "false");
+    }
+    function closeLightbox() {
+      lightbox.classList.remove("open");
+      lightbox.setAttribute("aria-hidden", "true");
+      lbImg.src = "";
+    }
+    function prev() {
+      if (!items.length) return;
+      currentIndex = (currentIndex - 1 + items.length) % items.length;
+      lbImg.src = items[currentIndex].src;
+    }
+    function next() {
+      if (!items.length) return;
+      currentIndex = (currentIndex + 1) % items.length;
+      lbImg.src = items[currentIndex].src;
+    }
+
+    lbClose.addEventListener("click", closeLightbox);
+    prevBtn.addEventListener("click", prev);
+    nextBtn.addEventListener("click", next);
+    window.addEventListener("keydown", (e) => {
+      if (!lightbox.classList.contains("open")) return;
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    });
+    lightbox.addEventListener("click", (e) => {
+      if (e.target === lightbox) closeLightbox(); // click backdrop to close
+    });
+
+    // ====== MODE 1: Choose a local folder (client-only) ======
+    // Works when you click “Choose folder…” and select your images directory.
+    const folderPicker = document.getElementById("folderPicker");
+    folderPicker.addEventListener("change", async (e) => {
+      const files = Array.from(e.target.files)
+        .filter(f => /^image\//.test(f.type));
+      files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      const list = files.map(f => ({
+        src: URL.createObjectURL(f),
+        title: f.name,
+        isObjectURL: true,
+      }));
+      renderGallery(list);
+    });
+
+    // ====== MODE 2: Load from /images using a static list ======
+    document.getElementById("loadStatic").addEventListener("click", () => {
+      if (!IMAGE_LIST.length) {
+        alert('IMAGE_LIST is empty.\nEdit the HTML and add your filenames, e.g. ["a.jpg","b.png", "].');
+        return;
+      }
+      const list = IMAGE_LIST.map(name => ({
+        src: `images/${name}`,
+        title: name,
+        isObjectURL: false,
+      }));
+      renderGallery(list);
+    });
+
+    // ====== MODE 3: Quick numbered demo ======
+    document.getElementById("loadNumbered").addEventListener("click", () => {
+      // Change to match your set (prefix/ext/count).
+      const files = generateNumberedList({ prefix: "image-", start: 1, end: 24, pad: 2, ext: "jpg" });
+      const list = files.map(name => ({ src: `images/${name}`, title: name, isObjectURL: false }));
+      renderGallery(list);
+    });
+
+    // Optional: auto-attempt static list on load
+    // If you want to default to /images with your list, uncomment:
+    window.addEventListener("DOMContentLoaded", () => {
+      if (IMAGE_LIST.length) document.getElementById("loadStatic").click();
+    });
+  </script>
+</body>
+</html>
