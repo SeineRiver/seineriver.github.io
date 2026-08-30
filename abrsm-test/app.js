@@ -184,6 +184,54 @@ const TIME_SIGNATURES = [
   { top: 2, bottom: 2 }, { top: 3, bottom: 2 }, { top: 4, bottom: 2 },
   { top: 3, bottom: 8 }, { top: 6, bottom: 8 }, { top: 9, bottom: 8 }, { top: 12, bottom: 8 },
 ].map((signature) => Object.freeze({ ...signature, label: `${signature.top}/${signature.bottom}` }));
+const CONFUSING_TIME_SIGNATURES = new Map([
+  ['4/4', '2/2'], ['2/2', '4/4'],
+  ['3/4', '6/8'], ['6/8', '3/4'],
+]);
+const KEY_SIGNATURE_ORDERS = {
+  sharp: ['F', 'C', 'G', 'D', 'A', 'E', 'B'],
+  flat: ['B', 'E', 'A', 'D', 'G', 'C', 'F'],
+};
+const KEY_SIGNATURE_STAFF_POSITIONS = {
+  // Treble clef positions, measured from the top line of the staff.
+  // The G-sharp position is kept on the higher G as used by this exercise.
+  sharp: { F: 20, C: 42.5, G: 12.5, D: 35, A: 57.5, E: 27.5, B: 50 },
+  flat: { B: 50, E: 27.5, A: 57.5, D: 35, G: 65, C: 42.5, F: 72.5 },
+};
+const KEY_SIGNATURES = [
+  ['C major', 'A minor', 'none', []],
+  ['G major', 'E minor', 'sharp', ['F']],
+  ['D major', 'B minor', 'sharp', ['F', 'C']],
+  ['A major', 'F♯ minor', 'sharp', ['F', 'C', 'G']],
+  ['E major', 'C♯ minor', 'sharp', ['F', 'C', 'G', 'D']],
+  ['F major', 'D minor', 'flat', ['B']],
+  ['B♭ major', 'G minor', 'flat', ['B', 'E']],
+  ['E♭ major', 'C minor', 'flat', ['B', 'E', 'A']],
+  ['A♭ major', 'F minor', 'flat', ['B', 'E', 'A', 'D']],
+].flatMap(([major, minor, accidental, notes]) => [
+  { key: major, accidental, notes }, { key: minor, accidental, notes },
+]);
+const SCALE_TEMPLATES = [
+  { major: ['C major', 'C', ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C']], minor: ['A minor', 'Am', ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'A']] },
+  { major: ['G major', 'G', ['G', 'A', 'B', 'C', 'D', 'E', 'F#', 'G']], minor: ['E minor', 'Em', ['E', 'F#', 'G', 'A', 'B', 'C', 'D', 'E']] },
+  { major: ['D major', 'D', ['D', 'E', 'F#', 'G', 'A', 'B', 'C#', 'D']], minor: ['B minor', 'Bm', ['B', 'C#', 'D', 'E', 'F#', 'G', 'A', 'B']] },
+  { major: ['A major', 'A', ['A', 'B', 'C#', 'D', 'E', 'F#', 'G#', 'A']], minor: ['F♯ minor', 'F#m', ['F#', 'G#', 'A', 'B', 'C#', 'D', 'E', 'F#']] },
+  { major: ['E major', 'E', ['E', 'F#', 'G#', 'A', 'B', 'C#', 'D#', 'E']], minor: ['C♯ minor', 'C#m', ['C#', 'D#', 'E', 'F#', 'G#', 'A', 'B', 'C#']] },
+  { major: ['F major', 'F', ['F', 'G', 'A', 'Bb', 'C', 'D', 'E', 'F']], minor: ['D minor', 'Dm', ['D', 'E', 'F', 'G', 'A', 'Bb', 'C', 'D']] },
+  { major: ['B♭ major', 'Bb', ['Bb', 'C', 'D', 'Eb', 'F', 'G', 'A', 'Bb']], minor: ['G minor', 'Gm', ['G', 'A', 'Bb', 'C', 'D', 'Eb', 'F', 'G']] },
+  { major: ['E♭ major', 'Eb', ['Eb', 'F', 'G', 'Ab', 'Bb', 'C', 'D', 'Eb']], minor: ['C minor', 'Cm', ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'Bb', 'C']] },
+  { major: ['A♭ major', 'Ab', ['Ab', 'Bb', 'C', 'Db', 'Eb', 'F', 'G', 'Ab']], minor: ['F minor', 'Fm', ['F', 'G', 'Ab', 'Bb', 'C', 'Db', 'Eb', 'F']] },
+];
+const SCALE_QUESTIONS = SCALE_TEMPLATES.flatMap(({ major, minor }) => {
+  const [majorName, majorKey, majorNotes] = major;
+  const [minorName, minorKey, minorNotes] = minor;
+  const minorTonic = minorName.replace(/ minor$/, '');
+  return [
+    { name: majorName, answer: majorName, equivalent: minorName, key: majorKey, notes: majorNotes, type: 'major' },
+    { name: `${minorTonic} harmonic minor`, answer: `${minorTonic} harmonic minor`, equivalent: majorName, key: minorKey, notes: minorNotes, type: 'harmonic-minor' },
+    { name: `${minorTonic} melodic minor`, answer: `${minorTonic} melodic minor`, equivalent: majorName, key: minorKey, notes: minorNotes, type: 'melodic-minor' },
+  ];
+});
 const RHYTHM_VALUES = [
   { units: 48, duration: '12' }, { units: 32, duration: '8' }, { units: 24, duration: '6' },
   { units: 16, duration: '4' }, { units: 12, duration: '3' }, { units: 8, duration: '2' },
@@ -390,20 +438,134 @@ function makeTimeSignatureNotation(signature) {
 function makeTimeSignatureQuestion() {
   const signature = randomFrom(TIME_SIGNATURES);
   const compound = signature.bottom === 8 && signature.top > 3 && signature.top % 3 === 0;
+  const options = [signature.label];
+  shuffle(TIME_SIGNATURES).forEach(({ label }) => {
+    const conflictsWithAnOption = options.some((option) => CONFUSING_TIME_SIGNATURES.get(option) === label);
+    if (options.length < 4 && !options.includes(label) && !conflictsWithAnOption) options.push(label);
+  });
   return {
     id: `time-signature-${signature.label}-${Math.random().toString(36).slice(2, 8)}`,
     category: 'time-signatures',
     grade: null,
-    answerType: 'time-signature',
     question: 'What is the time signature of the following bars?',
     answer: signature.label,
     correct: signature.label,
-    options: [],
+    options: shuffle(options),
     explanation: compound
       ? `${signature.label} has ${signature.top / 3} main beats, each grouped as three quavers.`
       : `${signature.label} has ${signature.top} beats in each bar, with a ${signature.bottom} note receiving one beat.`,
     image: null,
     notation: makeTimeSignatureNotation(signature),
+    userAnswer: null,
+  };
+}
+
+function keySignatureValue(accidental, notes) {
+  if (accidental === 'none') return 'none';
+  const orderedNotes = Array.isArray(notes)
+    ? notes
+    : KEY_SIGNATURE_ORDERS[accidental].filter((note) => notes.has(note));
+  return `${accidental}:${orderedNotes.join(',')}`;
+}
+
+function formatKeySignatureAnswer(answer) {
+  if (!answer || answer === 'none') return 'No sharps or flats';
+  const [accidental, noteList] = answer.split(':');
+  const symbol = accidental === 'sharp' ? '♯' : '♭';
+  return noteList ? noteList.split(',').map((note) => `${note}${symbol}`).join(', ') : 'No accidentals selected';
+}
+
+function makeKeySignatureQuestion() {
+  const signature = randomFrom(KEY_SIGNATURES);
+  const notes = new Set(signature.notes);
+  const correct = keySignatureValue(signature.accidental, notes);
+  return {
+    id: `key-signature-${signature.key.replaceAll('♯', 'sharp').replaceAll('♭', 'flat').replaceAll(' ', '-')}-${Math.random().toString(36).slice(2, 8)}`,
+    category: 'key-signatures',
+    grade: null,
+    answerType: 'key-signature',
+    question: `Give the key signature for ${signature.key}.`,
+    answer: correct,
+    correct,
+    options: [],
+    explanation: `${signature.key} has ${formatKeySignatureAnswer(correct).toLowerCase()}.`,
+    image: null,
+    notation: null,
+    userAnswer: null,
+  };
+}
+
+function scaleNoteWithAccidental(note, useKeySignature, signatureNotes) {
+  if (useKeySignature && signatureNotes.includes(note[0])) return note[0];
+  return note;
+}
+
+function makeScaleNotation(scale, direction, clef, useKeySignature) {
+  const ascendingNotes = scale.notes;
+  const descendingNotes = scale.type === 'melodic-minor' ? scale.naturalNotes : ascendingNotes;
+  const sourceNotes = direction === 'ascending' ? ascendingNotes : [...descendingNotes].reverse();
+  let octave = (clef === 'treble' ? 4 : 3) + (direction === 'descending' ? 1 : 0);
+  const notes = sourceNotes.map((note, index) => {
+    if (index > 0) {
+      const previousLetter = NOTE_LETTERS.indexOf(sourceNotes[index - 1][0]);
+      const currentLetter = NOTE_LETTERS.indexOf(note[0]);
+      if (direction === 'ascending' && currentLetter <= previousLetter) octave += 1;
+      if (direction === 'descending' && currentLetter >= previousLetter) octave -= 1;
+    }
+    return `${noteToAbc(scaleNoteWithAccidental(note, useKeySignature, scale.signatureNotes), octave)}4`;
+  });
+  const key = useKeySignature ? scale.key : 'C';
+  return {
+    abc: `X:1\nM:none\nL:1/4\nK:${key}\nV:1 clef=${clef}\n${notes.join(' ')}`,
+    alt: `${direction} ${scale.name} scale in ${clef} clef${useKeySignature ? ' with a key signature' : ' with accidentals on the notes'}`,
+  };
+}
+
+function makeScaleQuestion() {
+  const base = randomFrom(SCALE_TEMPLATES);
+  const isMajor = Math.random() < 0.5;
+  const [majorName, majorKey, majorNotes] = base.major;
+  const [minorName, minorKey, naturalMinorNotes] = base.minor;
+  const signatureNotes = KEY_SIGNATURES.find(({ key }) => key === majorName)?.notes || [];
+  const type = isMajor ? 'major' : randomFrom(['harmonic-minor', 'melodic-minor']);
+  const minorTonic = minorName.replace(/ minor$/, '');
+  const minorQuality = type === 'harmonic-minor' ? 'harmonic minor' : 'melodic minor';
+  const minorEquivalent = `${minorTonic} ${randomFrom(['harmonic minor', 'melodic minor'])}`;
+  const scale = isMajor
+    ? { name: majorName, answer: majorName, equivalent: minorEquivalent, key: majorKey, notes: majorNotes, naturalNotes: majorNotes, signatureNotes, type }
+    : {
+      name: `${minorTonic} ${minorQuality}`,
+      answer: `${minorTonic} ${minorQuality}`,
+      equivalent: majorName,
+      key: minorKey,
+      notes: naturalMinorNotes.map((note, index) => {
+        const harmonic = type === 'harmonic-minor' && index === 6;
+        const melodic = type === 'melodic-minor' && index >= 5 && index <= 6;
+        if (harmonic || melodic) {
+          return note.endsWith('b') ? `${note[0]}` : note.includes('#') ? note : `${note}#`;
+        }
+        return note;
+      }),
+      naturalNotes: naturalMinorNotes,
+      signatureNotes,
+      type,
+    };
+  const direction = randomFrom(['ascending', 'descending']);
+  const clef = randomFrom(['treble', 'bass']);
+  const useKeySignature = Math.random() < 0.5;
+  const answerPool = SCALE_QUESTIONS.map(({ answer }) => answer).filter((answer) => answer !== scale.answer && answer !== scale.equivalent);
+  return {
+    id: `scale-identification-${Math.random().toString(36).slice(2, 8)}`,
+    category: 'key-signatures',
+    grade: null,
+    answerType: 'scale-identification',
+    question: 'Identify this scale.',
+    answer: scale.answer,
+    correct: scale.answer,
+    options: shuffle([scale.answer, scale.equivalent, ...shuffle(answerPool).slice(0, 2)]),
+    explanation: `${scale.answer} is shown ${direction}. Its relative key is ${scale.equivalent}.`,
+    image: null,
+    notation: makeScaleNotation(scale, direction, clef, useKeySignature),
     userAnswer: null,
   };
 }
@@ -423,7 +585,12 @@ function createIntervalsTest(questionCount) {
 }
 
 function createTimeSignaturesTest(questionCount) {
-  return Array.from({ length: questionCount }, () => makeTimeSignatureQuestion());
+  const timeSignatureCount = Math.floor(questionCount * 0.3);
+  const questions = Array.from({ length: timeSignatureCount }, () => makeTimeSignatureQuestion());
+  for (let index = timeSignatureCount; index < questionCount; index += 1) {
+    questions.push((index - timeSignatureCount) % 2 === 0 ? makeKeySignatureQuestion() : makeScaleQuestion());
+  }
+  return shuffle(questions);
 }
 
 function setActiveCategory(category) {
@@ -460,6 +627,8 @@ function renderQuestion() {
   $('progress-bar').style.width = `${(position / state.test.length) * 100}%`;
   $('grade-badge').textContent = item.category === 'intervals'
     ? 'Intervals'
+    : item.category === 'key-signatures'
+      ? 'Key signatures'
     : item.category === 'time-signatures'
       ? 'Time signatures'
       : `Grade ${item.grade}`;
@@ -493,9 +662,10 @@ function renderQuestion() {
   answers.innerHTML = '';
   answers.classList.remove('correct', 'incorrect');
   answers.classList.toggle('interval-answers', item.category === 'intervals');
-  answers.classList.toggle('time-signature-answers', item.answerType === 'time-signature');
-  if (item.answerType === 'time-signature') {
-    renderTimeSignatureAnswers(item);
+  answers.classList.toggle('time-signature-answers', item.category === 'time-signatures');
+  answers.classList.toggle('key-signature-answers', item.answerType === 'key-signature');
+  if (item.answerType === 'key-signature') {
+    renderKeySignatureAnswers(item);
     return;
   }
   item.options.forEach((option, index) => {
@@ -511,6 +681,11 @@ function renderQuestion() {
       button.classList.add('interval-answer-option');
       button.innerHTML = `<strong class="answer-choice-label">${letter}.</strong><div class="answer-notation" role="img"></div>`;
       renderNotation(button.querySelector('.answer-notation'), makeIntervalOptionNotation(item, option), 240);
+    } else if (item.category === 'time-signatures') {
+      const [top, bottom] = option.split('/');
+      const markType = option === '4/4' ? ' common-time' : option === '2/2' ? ' alla-breve' : '';
+      button.classList.add('time-signature-answer-option');
+      button.innerHTML = `<strong class="answer-choice-label">${letter}.</strong><span class="time-signature-mark${markType}" role="img" aria-label="${option === '4/4' ? 'Common time, 4/4' : option === '2/2' ? 'Alla breve, 2/2' : option}">${option === '4/4' || option === '2/2' ? 'C' : `<span>${top}</span><span>${bottom}</span>`}</span>`;
     } else {
       button.innerHTML = `<strong>${letter}.</strong> ${option}`;
     }
@@ -519,34 +694,107 @@ function renderQuestion() {
   });
 }
 
-function renderTimeSignatureAnswers() {
+function renderKeySignaturePreview(element, accidental, notes) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 350 100');
+  svg.setAttribute('aria-hidden', 'true');
+  [20, 35, 50, 65, 80].forEach((y) => {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', '8'); line.setAttribute('x2', '342');
+    line.setAttribute('y1', String(y)); line.setAttribute('y2', String(y));
+    svg.appendChild(line);
+  });
+  const clef = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  clef.setAttribute('x', '18');
+  clef.setAttribute('y', '82');
+  clef.setAttribute('class', 'key-signature-clef');
+  clef.textContent = '𝄞';
+  svg.appendChild(clef);
+  if (accidental && accidental !== 'none') {
+    notes.forEach((note, index) => {
+      const mark = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      mark.setAttribute('x', String(84 + index * 34));
+      mark.setAttribute('y', String(KEY_SIGNATURE_STAFF_POSITIONS[accidental][note] + 9));
+      mark.setAttribute('class', 'key-signature-glyph');
+      mark.textContent = accidental === 'sharp' ? '♯' : '♭';
+      svg.appendChild(mark);
+    });
+  }
+  element.replaceChildren(svg);
+  element.setAttribute(
+    'aria-label',
+    accidental === 'none'
+      ? 'Empty staff: no sharps or flats'
+      : accidental
+        ? `Key signature preview: ${formatKeySignatureAnswer(keySignatureValue(accidental, notes))}`
+        : 'Empty staff: choose sharps, flats, or no accidentals'
+  );
+}
+
+function renderKeySignatureAnswers() {
   const answers = $('answers');
-  const numerator = document.createElement('select');
-  numerator.className = 'time-signature-select';
-  numerator.setAttribute('aria-label', 'Top number of the time signature');
-  const denominator = document.createElement('select');
-  denominator.className = 'time-signature-select';
-  denominator.setAttribute('aria-label', 'Bottom number of the time signature');
+  const builder = document.createElement('div');
+  builder.className = 'key-signature-builder';
+  const preview = document.createElement('div');
+  preview.className = 'key-signature-preview';
+  preview.setAttribute('role', 'img');
+  const modes = document.createElement('div');
+  modes.className = 'key-signature-modes';
+  modes.setAttribute('role', 'radiogroup');
+  modes.setAttribute('aria-label', 'Accidental type');
+  const notes = document.createElement('div');
+  notes.className = 'key-signature-notes';
+  notes.setAttribute('aria-label', 'Notes in the key signature');
+  const selectedNotes = [];
+  let accidental = null;
 
-  [['Choose', ''], ['2', '2'], ['3', '3'], ['4', '4'], ['6', '6'], ['9', '9'], ['12', '12']].forEach(([label, value]) => {
-    numerator.add(new Option(label, value));
-  });
-  [['Choose', ''], ['2', '2'], ['4', '4'], ['8', '8']].forEach(([label, value]) => {
-    denominator.add(new Option(label, value));
-  });
-
-  const divider = document.createElement('span');
-  divider.className = 'time-signature-divider';
-  divider.setAttribute('aria-hidden', 'true');
-  divider.textContent = '/';
-  const updateSelection = () => {
-    state.selected = numerator.value && denominator.value ? `${numerator.value}/${denominator.value}` : null;
+  const update = () => {
+    renderKeySignaturePreview(preview, accidental, selectedNotes);
+    modes.querySelectorAll('button').forEach((button) => {
+      const active = button.dataset.accidental === accidental;
+      button.classList.toggle('selected', active);
+      button.setAttribute('aria-checked', String(active));
+    });
+    notes.replaceChildren();
+    if (accidental && accidental !== 'none') {
+      const symbol = accidental === 'sharp' ? '♯' : '♭';
+      NOTE_LETTERS.forEach((note) => {
+        const button = document.createElement('button');
+        const active = selectedNotes.includes(note);
+        button.type = 'button';
+        button.className = 'key-note-button';
+        button.textContent = `${note}${symbol}`;
+        button.setAttribute('aria-pressed', String(active));
+        button.classList.toggle('selected', active);
+        button.addEventListener('click', () => {
+          const selectedIndex = selectedNotes.indexOf(note);
+          if (selectedIndex >= 0) selectedNotes.splice(selectedIndex, 1);
+          else selectedNotes.push(note);
+          update();
+        });
+        notes.appendChild(button);
+      });
+    }
+    state.selected = accidental === 'none' || selectedNotes.length > 0 ? keySignatureValue(accidental, selectedNotes) : null;
     $('next-button').disabled = !state.selected;
-    $('next-button').textContent = state.selected ? 'Check answer' : 'Choose an answer';
+    $('next-button').textContent = state.selected ? 'Check answer' : 'Build the key signature';
   };
-  numerator.addEventListener('change', updateSelection);
-  denominator.addEventListener('change', updateSelection);
-  answers.append(numerator, divider, denominator);
+
+  [['sharp', '♯ Sharps'], ['flat', '♭ Flats'], ['none', 'No accidentals']].forEach(([type, label]) => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'key-mode-button';
+    button.dataset.accidental = type; button.textContent = label;
+    button.setAttribute('role', 'radio'); button.setAttribute('aria-checked', 'false');
+    button.addEventListener('click', () => {
+      accidental = type;
+      selectedNotes.length = 0;
+      update();
+    });
+    modes.appendChild(button);
+  });
+  builder.append(preview, modes, notes);
+  answers.appendChild(builder);
+  update();
 }
 
 function chooseAnswer(button, answer) {
@@ -566,17 +814,16 @@ function submitAnswer() {
   state.locked = true;
   const correct = state.selected === item.correct;
   if (correct) state.score += 1;
-  if (item.answerType === 'time-signature') {
-    document.querySelectorAll('.time-signature-select').forEach((select) => { select.disabled = true; });
-    $('answers').classList.add(correct ? 'correct' : 'incorrect');
-  } else {
-    document.querySelectorAll('.answer-option').forEach((option) => {
-      option.disabled = true;
-      if (option.dataset.answer === item.correct) option.classList.add('correct');
-      else if (option.dataset.answer === item.userAnswer) option.classList.add('incorrect');
-    });
+  document.querySelectorAll('.answer-option').forEach((option) => {
+    option.disabled = true;
+    if (option.dataset.answer === item.correct) option.classList.add('correct');
+    else if (option.dataset.answer === item.userAnswer) option.classList.add('incorrect');
+  });
+  if (item.answerType === 'key-signature') {
+    document.querySelectorAll('.key-signature-builder button').forEach((button) => { button.disabled = true; });
+    document.querySelector('.key-signature-builder').classList.add(correct ? 'correct' : 'incorrect');
   }
-  $('feedback').textContent = correct ? 'Correct — well done.' : `Not quite. The correct answer is “${item.correct}”.`;
+  $('feedback').textContent = correct ? 'Correct — well done.' : `Not quite. The correct answer is “${item.answerType === 'key-signature' ? formatKeySignatureAnswer(item.correct) : item.correct}”.`;
   $('feedback').className = `feedback ${correct ? 'good' : 'bad'}`;
   $('score-label').textContent = `${state.score} correct`;
   $('next-button').textContent = state.current === state.test.length - 1 ? 'See results' : 'Next question';
@@ -609,10 +856,14 @@ function renderResults() {
     card.className = 'review-item';
     const label = item.category === 'intervals'
       ? 'Intervals'
+      : item.category === 'key-signatures'
+        ? 'Key signatures'
       : item.category === 'time-signatures'
         ? 'Time signatures'
         : `Grade ${item.grade}`;
-    card.innerHTML = `<h3>${label} · ${item.question}</h3>${item.notation ? '<div class="review-notation" role="img"></div>' : item.image ? `<img class="review-image" src="${item.image}" alt="Musical notation for the question" />` : ''}<p><strong>Your answer:</strong> ${item.userAnswer || 'No answer'}</p><p><strong>Correct answer:</strong> ${item.correct}</p><p class="review-explanation"><strong>Explanation:</strong> ${item.explanation}</p>`;
+    const userAnswer = item.answerType === 'key-signature' ? formatKeySignatureAnswer(item.userAnswer) : item.userAnswer;
+    const correctAnswer = item.answerType === 'key-signature' ? formatKeySignatureAnswer(item.correct) : item.correct;
+    card.innerHTML = `<h3>${label} · ${item.question}</h3>${item.notation ? '<div class="review-notation" role="img"></div>' : item.image ? `<img class="review-image" src="${item.image}" alt="Musical notation for the question" />` : ''}<p><strong>Your answer:</strong> ${userAnswer || 'No answer'}</p><p><strong>Correct answer:</strong> ${correctAnswer}</p><p class="review-explanation"><strong>Explanation:</strong> ${item.explanation}</p>`;
     if (item.notation) renderNotation(card.querySelector('.review-notation'), item.notation, 250);
     review.appendChild(card);
   });
